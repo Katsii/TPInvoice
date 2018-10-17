@@ -94,7 +94,68 @@ public class TransactionTest {
 		assertEquals(before + 2f * 10f, after, 0.001f);		
 	}
 	
-
+        // On verifie que les tables ont la meme taille
+        @Test
+        public void cantCreateInvoiceTabDifferentsQua() throws Exception {
+           // On calcule combien le client a de facture
+           int id = myCustomer.getCustomerId();
+           int before = myDAO.numberOfInvoicesForCustomer(id);
+           // Un tableau de 2 productID
+           int[] productIds = new int[]{0,1};
+           // Un tableau de 3 quantites
+           int[] quantities = new int[]{10,20,20};
+           //On execute la transation
+           try {
+                myDAO.createInvoice(myCustomer, productIds, quantities);
+           }catch(Exception e){
+               // On passe par la car on a une erreur et on verifie qu'aucune ligne n'a été crée
+               int after = myDAO.numberOfInvoicesForCustomer(myCustomer.getCustomerId());
+               // Le client a le meme nombre de facture
+               assertEquals(before, after);
+           }       
+       }
+        // On verifie qu'il est impossible de créer une facture avec un produit inconnu
+       @Test
+       public void cantCreateInvoiceProdUnknown() throws Exception {
+           // On calcule combien le client a de facture
+           int id = myCustomer.getCustomerId();
+           int before = myDAO.numberOfInvoicesForCustomer(id);
+           // Un tableau de 3 productID
+           int[] productIds = new int[]{0,1,4};
+           // Un tableau de 5 quantites
+           int[] quantities = new int[]{10,20,5};
+           //On execute la transation
+           try {
+                myDAO.createInvoice(myCustomer, productIds, quantities);
+           }catch(Exception e){
+               // On passe par la car on a une erreur et on verifie qu'aucune ligne n'a été crée
+               int after = myDAO.numberOfInvoicesForCustomer(myCustomer.getCustomerId());
+               // Le client a le meme nombre de facture
+               assertEquals(before, after);
+           }
+       }
+       
+       // On verifie qu'il est impossible de créer une facture avec une quantité negatif
+        @Test
+        public void cantCreateInvoiceQuaNegat() throws Exception {
+           // On calcule combien le client a de facture
+           int id = myCustomer.getCustomerId();
+           int before = myDAO.numberOfInvoicesForCustomer(id);
+           // Un tableau de 3 productID
+           int[] productIds = new int[]{0,1,2};
+           // Un tableau de 3 quantites
+           int[] quantities = new int[]{10,-1,20};
+           //On execute la transation
+           try {
+                myDAO.createInvoice(myCustomer, productIds, quantities);
+           }catch(Exception e){
+               // On passe par la car on a une erreur et on verifie qu'aucune ligne n'a été crée
+               int after = myDAO.numberOfInvoicesForCustomer(myCustomer.getCustomerId());
+               // Le client a le meme nombre de facture
+               assertEquals(before, after);
+           }
+          
+       }
 	
 	public static DataSource getDataSource() throws SQLException {
 		org.hsqldb.jdbc.JDBCDataSource ds = new org.hsqldb.jdbc.JDBCDataSource();

@@ -76,9 +76,85 @@ public class DAO {
 	 * taille
 	 * @throws java.lang.Exception si la transaction a échoué
 	 */
-	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities)
-		throws Exception {
-		throw new UnsupportedOperationException("Pas encore implémenté");
+	public void createInvoice(CustomerEntity customer, int[] productIDs, int[] quantities) throws Exception {
+           
+		// On calcule le résultat
+		String sqlNewInvoice = "INSERT INTO Invoice (CustomerID) VALUES (?)";
+                
+                String sqlGetPrice= "SELECT Price FROM Product WHERE ID = ?";
+                
+                 String sqlNewItem = "INSERT INTO Item (InvoiceID, Item, ProductID, Quantity, Cost) Values(?,?,?,?,?)";
+                
+                String sqlUpInvoice = "UPDATE INVOICE SET CustomerID=? WHERE ID=?";
+
+                // EXCEPTION
+                String mess1 = "Produit Inconnu";
+                String mess2 = "Quantite Incorrect";
+                String mess3 = "Tableau taille différente";
+                
+		try (	Connection myConnection = myDataSource.getConnection();
+			PreparedStatement smtNewInvoice = myConnection.prepareStatement(sqlNewInvoice);
+                        PreparedStatement smtGetPrice = myConnection.prepareStatement(sqlGetPrice);
+                        PreparedStatement smtNewItem = myConnection.prepareStatement(sqlNewItem);
+                        PreparedStatement smtUpInvoice = myConnection.prepareStatement(sqlUpInvoice);) {
+			
+// On verifie si le tableau de productsID a la meme taille que le tableau quantite
+                    if (productIDs.length==quantities.length){
+                        // Si un produit est introuvable dans la table on lance une erreur
+                       
+                        for (int i = 0; i < productIDs.length; i ++){
+                            if (!findProduct(productIDs[i])){
+                                throw new Exception(mess1);
+                            }   
+                        }
+                        // Si une quantite de produit est négatif ou equal a zero on lance une erreur
+                        for (int i = 0; i < quantities.length; i++){
+                            if (quantities[i] <= 0) {
+                                throw new Exception(mess2);
+                            }   
+                        }
+                        
+                    float priceProduct = 0;
+                    int customerID;
+                     int invoiceID = 0;
+                    //Créer une facture vide associé au client
+                        customerID = customer.getCustomerId();
+                        smtNewInvoice.setInt(1, customerID);
+			smtNewInvoice.executeUpdate();
+                        
+                        
+                        ResultSet clefs = smtNewInvoice.getGeneratedKeys();
+                        while(clefs.next()){
+                           invoiceID = clefs.getInt(1);
+                       }
+                        
+                        for(int i = 0 ; i < productIDs.length ;i++){
+                                smtGetPrice.setInt(1, productIDs[i]);
+                                // Un ResultSet pour parcourir les enregistrements du résultat
+                                ResultSet rs = smtGetPrice.executeQuery();
+                            if (rs.next()) {                                
+                                    priceProduct = rs.getFloat("Price");
+                            }
+                           
+                                //Créer une nouvelle ligne de item
+                                smtNewItem.setInt(1, invoiceID);
+                                smtNewItem.setInt(2,i);
+                                smtNewItem.setInt(3,productIDs[i] );
+                                smtNewItem.setInt(4, quantities[i]);
+                                smtNewItem.setFloat(5, priceProduct);
+                                smtNewItem.executeUpdate();
+                        }
+                        
+                        smtUpInvoice.setDouble(1,customerID);
+                        smtUpInvoice.setInt(2,invoiceID);
+                        smtUpInvoice.executeUpdate();
+                    } else {
+                       throw new Exception(mess3);
+                    }                  
+                }catch(Exception ex){
+                    throw new Exception(ex.getMessage());
+                }    
+                    
 	}
 
 	/**
@@ -147,6 +223,29 @@ public class DAO {
 		return result;
 	}
 
+          /**
+	 * Trouver un produit à partir de sa clé
+	 *
+	 * @param ID la clé du PRODUCT à rechercher
+	 * @return un boolean si on trouve un produit correspondant a la clé
+	 * @throws SQLException
+	 */
+	boolean findProduct(int ID) throws SQLException {
+		boolean result = false;
+
+		String sql = "SELECT * FROM Product WHERE ID = ?";
+		try (Connection connection = myDataSource.getConnection();
+			PreparedStatement stmt = connection.prepareStatement(sql)) {
+			stmt.setInt(1, ID);
+
+			ResultSet rs = stmt.executeQuery();
+                        // Si on trouve au moins une ligne correspondant au produit on renvoie vrai
+			if (rs.next()) {
+				result = true;
+			}
+		}
+		return result;
+	}
 	/**
 	 * Liste des clients localisés dans un état des USA
 	 *
@@ -174,4 +273,6 @@ public class DAO {
 
 		return result;
 	}
+        
+   
 }
